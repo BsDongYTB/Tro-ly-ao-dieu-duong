@@ -108,26 +108,47 @@ F. ĐỊNH DẠNG JSON ALERT (Mô phỏng):
 /**
  * Netlify Function handler
  */
-exports.handler = async (event, context) => {
+async function callGeminiWithRetry(model, payload, retries = 2) {
+    try {
+        return await model.generateContent(payload);
+    } catch (err) {
+        // Nếu bị 429 thì thử lại sau 1200 ms
+        if (err.message?.includes("429") && retries > 0) {
+            console.log("⚠️ 429 Too Many Requests → retrying...");
+            await new Promise(res => setTimeout(res, 1200));
+            return callGeminiWithRetry(model, payload, retries - 1);
+        }
+        throw err;
+    }
+}
+
+/* ======================================================
+   NETLIFY FUNCTION
+   ====================================================== */
+export async function handler(event, context) {
+    // Chỉ cho phép POST
     if (event.httpMethod !== "POST") {
         return { statusCode: 405, body: JSON.stringify({ error: "Method Not Allowed" }) };
     }
 
-    // Lấy API Key từ biến môi trường
+    // Lấy API Key
     const apiKey = process.env.GEMINI_API_KEY;
-
     if (!apiKey) {
-        // Lỗi này xảy ra khi biến môi trường không được đặt trên Netlify
-        return { statusCode: 500, body: JSON.stringify({ error: "Configuration Error: GEMINI_API_KEY not found in environment variables." }) };
+        return {
+            statusCode: 500,
+            body: JSON.stringify({
+                error: "Configuration Error: GEMINI_API_KEY not found in environment variables."
+            })
+        };
     }
-    
-    // Khởi tạo client bên trong handler để đảm bảo luôn lấy được biến môi trường
+
+    // Khởi tạo client
     const ai = new GoogleGenerativeAI(apiKey);
 
     try {
         const { history } = JSON.parse(event.body);
 
-        // Xây dựng Context cho AI (bao gồm Dữ liệu Word và Quy tắc)
+        // Nhúng dữ liệu word và quy tắc
         const contextMessage = {
             role: "user",
             parts: [{
@@ -140,37 +161,39 @@ ${KNOWLEDGE_BASE_DATA}
             }]
         };
 
-        // Gửi Context và Lịch sử chat (trừ tin nhắn chào mừng ban đầu)
         const contents = [
             contextMessage,
             ...history.slice(1)
         ];
 
-        // Gọi Gemini API
-        const model = ai.getGenerativeModel({ model: "gemini-2.0-flash" });
-
-        const response = await model.generateContent({
-            contents
+        // Gọi Gemini (có retry)
+        const model = ai.getGenerativeModel({
+            model: "gemini-2.0-flash"
         });
 
-        const result = response.response.text || "Không thể tạo phản hồi lúc này.";
+        const response = await callGeminiWithRetry(model, { contents });
+
+        let text = "Không thể tạo phản hồi lúc này.";
+        if (response?.response?.text) {
+            text = response.response.text();
+        }
 
         return {
             statusCode: 200,
-            body: JSON.stringify({ reply: result })
+            body: JSON.stringify({ reply: text })
         };
 
     } catch (error) {
-        // Bắt lỗi cụ thể từ Gemini và hiển thị lại cho người dùng
-        console.error("Gemini API Error:", error.message);
-        let errorMessage = "Lỗi không xác định khi gọi AI.";
-        
-        if (error.message && error.message.includes("429 Too Many Requests")) {
-            errorMessage = "Lỗi 429: Hạn mức API tạm thời bị quá tải. Vui lòng chờ 30 phút và thử lại.";
-        } else if (error.message && error.message.includes("API Key not valid")) {
-            errorMessage = "Lỗi xác thực: Khóa API không hợp lệ.";
+        console.error("Gemini API Error:", error);
+
+        let errorMessage = "Lỗi API không xác định.";
+
+        if (error.message?.includes("429")) {
+            errorMessage = "Lỗi 429: Hạn mức API tạm thời bị quá tải. Vui lòng thử lại sau."; 
+        } else if (error.message?.includes("API key not valid")) {
+            errorMessage = "Khóa API không hợp lệ.";
         } else {
-            errorMessage = `Lỗi API: ${error.message}`;
+            errorMessage = error.message;
         }
 
         return {
@@ -178,4 +201,4 @@ ${KNOWLEDGE_BASE_DATA}
             body: JSON.stringify({ error: errorMessage })
         };
     }
-};
+}
