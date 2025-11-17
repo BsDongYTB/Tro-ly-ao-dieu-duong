@@ -22,12 +22,56 @@
         .chat-history::-webkit-scrollbar-track {
             background: #f1f5f9;
         }
-        /* Hide scrollbar for images in the header */
+        /* Typing Indicator Animation */
+        .typing-indicator span {
+            animation: bounce 0.6s infinite alternate;
+        }
+        .typing-indicator span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        .typing-indicator span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        @keyframes bounce {
+            from {
+                transform: translateY(0);
+            }
+            to {
+                transform: translateY(-4px);
+            }
+        }
+        /* Tối ưu hóa cho mobile */
+        body {
+            /* Giữ nguyên màu nền nhưng loại bỏ padding/margin thừa */
+            padding: 0;
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: flex-start; /* căn trên */
+            justify-content: center;
+        }
+        #chat-container {
+            /* Chiếm toàn bộ màn hình trên mobile */
+            height: 100vh;
+            width: 100vw;
+            max-width: 500px; /* Giới hạn trên desktop */
+            border-radius: 0; /* Loại bỏ góc bo tròn trên mobile */
+            box-shadow: none; /* Loại bỏ đổ bóng trên mobile */
+        }
+        
+        /* Header mới: Logo full width */
+        .header-logo-container {
+            width: 100%;
+            height: 50px; /* Chiều cao cố định cho logo */
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
         .header-logo {
-            flex-shrink: 0;
-            width: 32px; 
-            height: 32px;
-            object-fit: contain; 
+            width: 100%; /* Logo chiếm full chiều rộng container */
+            height: auto;
+            object-fit: contain;
         }
         .message-avatar {
             width: 28px; 
@@ -36,23 +80,25 @@
             border-radius: 50%; 
             margin-right: 8px;
         }
-        /* Chiều cao ước tính của Input Area (~90px) */
         .input-area-height {
             height: 90px;
         }
     </style>
 </head>
-<body class="bg-gray-50 flex items-center justify-center min-h-screen p-4">
-    <div id="chat-container" class="w-full max-w-lg bg-white shadow-xl rounded-2xl flex flex-col h-[80vh] md:h-[90vh] overflow-hidden relative">
+<body class="bg-gray-50">
+    <div id="chat-container" class="bg-white flex flex-col overflow-hidden relative transition-all duration-300">
         
         <!-- Header -->
-        <header class="bg-indigo-600 text-white p-4 rounded-t-2xl shadow-md flex flex-col">
-            <div class="flex items-center">
+        <header class="bg-indigo-600 text-white shadow-md flex flex-col p-0">
+            <!-- Dòng Logo Full Width -->
+            <div class="header-logo-container bg-white">
                 <!-- LOGO 1: Đường dẫn đã sửa: tìm kiếm trong thư mục gốc -->
-                <img src="./Logo1.png" onerror="this.src='https://placehold.co/32x32/1e3a8a/ffffff?text=L1'" alt="Logo Khung Chat" class="header-logo mr-3">
-                <h1 class="text-xl font-bold flex-grow">Trợ lý ảo Điều dưỡng</h1>
+                <img src="./Logo1.png" onerror="this.src='https://placehold.co/100x50/ffffff/1e3a8a?text=LOGO+1'" alt="Logo Khung Chat" class="header-logo">
             </div>
-            <p id="user-id-display" class="text-xs mt-1 opacity-75">Sẵn sàng</p>
+            <!-- Dòng Tiêu đề -->
+            <div class="px-4 py-2">
+                <h1 id="user-id-display" class="text-xl font-bold">Trợ lý ảo Điều dưỡng</h1>
+            </div>
         </header>
 
         <!-- Chat History Area -->
@@ -78,7 +124,11 @@
         <!-- Input Area -->
         <div id="input-area" class="input-area-height p-4 bg-gray-100 border-t border-gray-200">
             <div id="loading-indicator" class="text-sm text-center text-gray-500 mb-2 hidden">
-                Đang suy nghĩ...
+                <div class="typing-indicator flex items-center justify-center space-x-1">
+                    <span class="w-2 h-2 bg-gray-500 rounded-full"></span>
+                    <span class="w-2 h-2 bg-gray-500 rounded-full"></span>
+                    <span class="w-2 h-2 bg-gray-500 rounded-full"></span>
+                </div>
             </div>
             <div class="flex">
                 <input type="text" id="user-input" placeholder="Nhập câu hỏi của bạn..."
@@ -109,7 +159,7 @@
         // =================================================================
 
         const HOTLINE_NUMBER = "0913570808"; 
-        // Đã sửa đường dẫn: tìm trong thư mục gốc
+        // Đường dẫn trong thư mục gốc
         const BOT_AVATAR = "./Logo2.png"; 
         const USER_AVATAR = "./Logo1.png"; 
 
@@ -147,8 +197,6 @@
 
         /**
          * Thêm tin nhắn mới vào lịch sử chat
-         * @param {string} text - Nội dung tin nhắn
-         * @param {string} role - Vai trò ("user" hoặc "model")
          */
         function appendMessage(text, role) {
             const messageWrapper = document.createElement('div');
@@ -234,7 +282,8 @@
             // 1. Hiển thị tin nhắn người dùng
             appendMessage(userMessage, 'user');
             
-            // 2. Cập nhật lịch sử chat cục bộ cho AI (chỉ gửi tin nhắn)
+            // 2. Cập nhật lịch sử chat cục bộ cho AI (chuẩn bị gửi)
+            // Lần gửi đầu tiên, hệ thống instruction sẽ được gửi kèm
             geminiChatHistory.push({ role: "user", parts: [{ text: userMessage }] });
 
             userInput.value = ''; 
