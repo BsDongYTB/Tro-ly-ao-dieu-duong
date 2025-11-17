@@ -42,42 +42,70 @@
         }
         /* Tối ưu hóa cho mobile */
         body {
-            /* Giữ nguyên màu nền nhưng loại bỏ padding/margin thừa */
             padding: 0;
             margin: 0;
             min-height: 100vh;
             display: flex;
-            align-items: flex-start; /* căn trên */
+            align-items: flex-start; 
             justify-content: center;
         }
         #chat-container {
-            /* Chiếm toàn bộ màn hình trên mobile */
             height: 100vh;
             width: 100vw;
-            max-width: 500px; /* Giới hạn trên desktop */
-            border-radius: 0; /* Loại bỏ góc bo tròn trên mobile */
-            box-shadow: none; /* Loại bỏ đổ bóng trên mobile */
+            max-width: 500px;
+            border-radius: 0; 
+            box-shadow: none; 
         }
         
-        /* Header mới: Logo full width */
+        /* HEADER MỚI: Thiết kế 2 tầng (Logo và Tiêu đề) */
+        .header-main {
+            display: flex;
+            flex-direction: column;
+            padding: 0;
+            /* Đảm bảo nền của cả khối header là màu chủ đạo */
+            background-color: #4f46e5; /* indigo-600 */ 
+        }
         .header-logo-container {
             width: 100%;
-            height: 50px; /* Chiều cao cố định cho logo */
+            /* Chiều cao cố định, cho phép logo lấp đầy */
+            height: 70px; 
             overflow: hidden;
             display: flex;
             justify-content: center;
             align-items: center;
+            background-color: white; /* Nền trắng cho logo */
         }
         .header-logo {
-            width: 100%; /* Logo chiếm full chiều rộng container */
+            /* Logo chiếm chiều rộng tối đa, không bị cắt */
+            width: 100%; 
             height: auto;
+            max-height: 70px;
             object-fit: contain;
         }
+        .header-title-bar {
+            /* Thanh tiêu đề nằm bên dưới logo */
+            padding: 8px 16px; 
+            background-color: #4f46e5; /* indigo-600 */
+        }
+
+        /* Avatar/Icon chat */
         .message-avatar {
             width: 28px; 
             height: 28px;
             object-fit: contain;
             border-radius: 50%; 
+            margin-right: 8px;
+        }
+        .user-avatar-placeholder {
+            /* Styling cho avatar người dùng mặc định */
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background-color: #9ca3af; /* gray-400 */
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             margin-right: 8px;
         }
         .input-area-height {
@@ -88,15 +116,17 @@
 <body class="bg-gray-50">
     <div id="chat-container" class="bg-white flex flex-col overflow-hidden relative transition-all duration-300">
         
-        <!-- Header -->
-        <header class="bg-indigo-600 text-white shadow-md flex flex-col p-0">
-            <!-- Dòng Logo Full Width -->
-            <div class="header-logo-container bg-white">
-                <!-- LOGO 1: Đường dẫn đã sửa: tìm kiếm trong thư mục gốc -->
-                <img src="./Logo1.png" onerror="this.src='https://placehold.co/100x50/ffffff/1e3a8a?text=LOGO+1'" alt="Logo Khung Chat" class="header-logo">
+        <!-- Header (Logo Full Width, Tiêu đề bên dưới) -->
+        <header class="header-main text-white shadow-md">
+            <!-- Dòng 1: Logo Full Width (Logo 1) -->
+            <div class="header-logo-container">
+                <img src="./Logo1.png" 
+                     onerror="this.onerror=null; this.src='https://placehold.co/400x70/ffffff/1e3a8a?text=LOGO+CHINH'" 
+                     alt="Logo Khung Chat" 
+                     class="header-logo">
             </div>
-            <!-- Dòng Tiêu đề -->
-            <div class="px-4 py-2">
+            <!-- Dòng 2: Tiêu đề -->
+            <div class="header-title-bar">
                 <h1 id="user-id-display" class="text-xl font-bold">Trợ lý ảo Điều dưỡng</h1>
             </div>
         </header>
@@ -105,8 +135,9 @@
         <div id="chat-history" class="chat-history flex-grow overflow-y-auto p-4 space-y-4">
             <!-- Tin nhắn chào mừng ban đầu -->
             <div class="flex justify-start items-start">
-                <!-- LOGO 2: Đường dẫn đã sửa: tìm kiếm trong thư mục gốc -->
-                <img src="./Logo2.png" alt="Logo Chatbot" class="message-avatar mt-1" onerror="this.onerror=null; this.src='https://placehold.co/28x28/1e3a8a/ffffff?text=B'">
+                <!-- Avatar Bot: Logo 2 -->
+                <img src="./Logo2.png" alt="Logo Chatbot" class="message-avatar mt-1" 
+                     onerror="this.onerror=null; this.src='https://placehold.co/28x28/1e3a8a/ffffff?text=B'">
                 <div class="bg-indigo-100 text-indigo-900 p-3 rounded-xl rounded-bl-none max-w-xs shadow">
                     <p class="font-semibold text-sm">Trợ lý ảo Điều dưỡng</p>
                     <p>Xin chào, tôi là Trợ lý Ảo Điều Dưỡng của Bệnh viện 👩‍⚕️. Tôi ở đây để hỗ trợ các câu hỏi liên quan đến chăm sóc sau phẫu thuật. Bạn cần tôi giúp gì?</p>
@@ -159,9 +190,10 @@
         // =================================================================
 
         const HOTLINE_NUMBER = "0913570808"; 
-        // Đường dẫn trong thư mục gốc
-        const BOT_AVATAR = "./Logo2.png"; 
-        const USER_AVATAR = "./Logo1.png"; 
+        
+        // Cập nhật: Logo Bot là Logo 2 (File), Logo User là Placeholder Mặc định
+        const BOT_AVATAR_FILE = './Logo2.png'; 
+        const USER_AVATAR_PLACEHOLDER = '👤'; 
 
         // DOM Elements
         const chatHistory = document.getElementById('chat-history');
@@ -204,20 +236,31 @@
             
             messageWrapper.className = `flex ${role === 'user' ? 'justify-end' : 'justify-start'} items-start`;
             
-            // Thêm avatar
-            const avatar = document.createElement('img');
-            avatar.src = role === 'model' ? BOT_AVATAR : USER_AVATAR;
-            avatar.alt = role === 'model' ? "Bot Avatar" : "User Avatar";
-            avatar.className = "message-avatar mt-1";
-
-            avatar.onerror = function() {
-                this.onerror=null; 
-                this.src = `https://placehold.co/28x28/${role === 'model' ? '1e3a8a' : '377dff'}/ffffff?text=${role === 'model' ? 'B' : 'U'}`;
-            };
-
+            // Container Avatar
+            const avatarContainer = document.createElement('div');
+            
             if (role === 'model') {
-                messageWrapper.appendChild(avatar);
+                // AVATAR BOT (Sử dụng img cho Logo 2)
+                const botImg = document.createElement('img');
+                botImg.src = BOT_AVATAR_FILE;
+                botImg.alt = "Bot Avatar";
+                botImg.className = "message-avatar mt-1";
+                // Fallback nếu ảnh không load
+                botImg.onerror = function() {
+                    this.onerror=null; 
+                    this.src = `https://placehold.co/28x28/1e3a8a/ffffff?text=B`;
+                };
+                avatarContainer.appendChild(botImg);
+                messageWrapper.appendChild(avatarContainer);
+            } else {
+                // AVATAR USER (Sử dụng Placeholder Mặc định)
+                avatarContainer.className = "user-avatar-placeholder mt-1";
+                const userEmoji = document.createElement('span');
+                userEmoji.className = 'text-lg';
+                userEmoji.textContent = USER_AVATAR_PLACEHOLDER;
+                avatarContainer.appendChild(userEmoji);
             }
+
 
             // Cấu hình nội dung tin nhắn
             let bgColor = role === 'user' ? 'bg-indigo-600 text-white' : 'bg-indigo-100 text-indigo-900';
@@ -240,10 +283,8 @@
             messageWrapper.appendChild(messageContent);
             
             if (role === 'user') {
-                messageWrapper.appendChild(avatar); // User avatar bên phải
-            } else {
-                // Đã thêm avatar model bên trên
-            }
+                messageWrapper.appendChild(avatarContainer); // User avatar bên phải
+            } 
             
             chatHistory.appendChild(messageWrapper);
 
