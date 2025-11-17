@@ -62,12 +62,9 @@
             display: flex;
             flex-direction: column;
             padding: 0;
-            /* Đảm bảo nền của cả khối header là màu chủ đạo */
-            background-color: #4f46e5; /* indigo-600 */ 
         }
         .header-logo-container {
             width: 100%;
-            /* Chiều cao cố định, cho phép logo lấp đầy */
             height: 70px; 
             overflow: hidden;
             display: flex;
@@ -97,7 +94,7 @@
             margin-right: 8px;
         }
         .user-avatar-placeholder {
-            /* Styling cho avatar người dùng mặc định */
+            /* Styling cho avatar người dùng xám mặc định */
             width: 28px;
             height: 28px;
             border-radius: 50%;
@@ -106,7 +103,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-right: 8px;
+            margin-left: 8px; /* Đẩy sang bên trái tin nhắn */
         }
         .input-area-height {
             height: 90px;
@@ -155,6 +152,7 @@
         <!-- Input Area -->
         <div id="input-area" class="input-area-height p-4 bg-gray-100 border-t border-gray-200">
             <div id="loading-indicator" class="text-sm text-center text-gray-500 mb-2 hidden">
+                <!-- Vị trí chuẩn của hoạt ảnh typing -->
                 <div class="typing-indicator flex items-center justify-center space-x-1">
                     <span class="w-2 h-2 bg-gray-500 rounded-full"></span>
                     <span class="w-2 h-2 bg-gray-500 rounded-full"></span>
@@ -191,7 +189,7 @@
 
         const HOTLINE_NUMBER = "0913570808"; 
         
-        // Cập nhật: Logo Bot là Logo 2 (File), Logo User là Placeholder Mặc định
+        // Cập nhật: Logo Bot là Logo 2 (File), Logo User là Placeholder Mặc định (xám)
         const BOT_AVATAR_FILE = './Logo2.png'; 
         const USER_AVATAR_PLACEHOLDER = '👤'; 
 
