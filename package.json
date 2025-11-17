@@ -3,6 +3,6 @@
   "version": "1.0.0",
   "description": "Dependencies for Netlify Function to handle Gemini API calls.",
   "dependencies": {
-    "@google/genai": "^0.1.0"
+    "@google/genai": "^0.1.1" 
   }
 }
