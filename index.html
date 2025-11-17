@@ -48,8 +48,8 @@
         <!-- Header -->
         <header class="bg-indigo-600 text-white p-4 rounded-t-2xl shadow-md flex flex-col">
             <div class="flex items-center">
-                <!-- LOGO 1: Đường dẫn tương đối từ thư mục gốc -->
-                <img src="./images/Logo1.png" onerror="this.src='https://placehold.co/32x32/1e3a8a/ffffff?text=L1'" alt="Logo Khung Chat" class="header-logo mr-3">
+                <!-- LOGO 1: Đường dẫn đã sửa: tìm kiếm trong thư mục gốc -->
+                <img src="./Logo1.png" onerror="this.src='https://placehold.co/32x32/1e3a8a/ffffff?text=L1'" alt="Logo Khung Chat" class="header-logo mr-3">
                 <h1 class="text-xl font-bold flex-grow">Trợ lý ảo Điều dưỡng</h1>
             </div>
             <p id="user-id-display" class="text-xs mt-1 opacity-75">Sẵn sàng</p>
@@ -59,7 +59,8 @@
         <div id="chat-history" class="chat-history flex-grow overflow-y-auto p-4 space-y-4">
             <!-- Tin nhắn chào mừng ban đầu -->
             <div class="flex justify-start items-start">
-                <img src="./images/Logo2.png" alt="Logo Chatbot" class="message-avatar mt-1" onerror="this.onerror=null; this.src='https://placehold.co/28x28/1e3a8a/ffffff?text=B'">
+                <!-- LOGO 2: Đường dẫn đã sửa: tìm kiếm trong thư mục gốc -->
+                <img src="./Logo2.png" alt="Logo Chatbot" class="message-avatar mt-1" onerror="this.onerror=null; this.src='https://placehold.co/28x28/1e3a8a/ffffff?text=B'">
                 <div class="bg-indigo-100 text-indigo-900 p-3 rounded-xl rounded-bl-none max-w-xs shadow">
                     <p class="font-semibold text-sm">Trợ lý ảo Điều dưỡng</p>
                     <p>Xin chào, tôi là Trợ lý Ảo Điều Dưỡng của Bệnh viện 👩‍⚕️. Tôi ở đây để hỗ trợ các câu hỏi liên quan đến chăm sóc sau phẫu thuật. Bạn cần tôi giúp gì?</p>
@@ -108,8 +109,9 @@
         // =================================================================
 
         const HOTLINE_NUMBER = "0913570808"; 
-        const BOT_AVATAR = "./images/Logo2.png"; 
-        const USER_AVATAR = "./images/Logo1.png"; 
+        // Đã sửa đường dẫn: tìm trong thư mục gốc
+        const BOT_AVATAR = "./Logo2.png"; 
+        const USER_AVATAR = "./Logo1.png"; 
 
         // DOM Elements
         const chatHistory = document.getElementById('chat-history');
@@ -121,7 +123,6 @@
         const hotlineButton = document.getElementById('hotline-floating-button'); 
 
         // Lưu trữ lịch sử chat cục bộ (trong phiên)
-        // Lưu ý: Lịch sử này không được gửi lên Netlify Function vì KNOWLEDGE_BASE_DATA đã được gửi sẵn.
         let geminiChatHistory = []; 
 
         // Lắng nghe sự kiện click nút Gửi
