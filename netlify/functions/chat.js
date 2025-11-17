@@ -1,15 +1,14 @@
-const { GoogleGenAI } = require('@google/genai');
+cconst { GoogleGenerativeAI } = require("@google/generative-ai");
 
-// Lấy API Key từ biến môi trường (Environment Variable) của Netlify
-// Tên biến sẽ là GEMINI_API_KEY
+// Load API Key từ Netlify Environment Variables
 const apiKey = process.env.GEMINI_API_KEY;
 
-// Kiểm tra và khởi tạo AI client
+// Khởi tạo client
 let ai;
 if (apiKey) {
-    ai = new GoogleGenAI(apiKey);
+    ai = new GoogleGenerativeAI(apiKey);
 } else {
-    console.error("GEMINI_API_KEY is not set in Netlify Environment Variables. Using a dummy key for local testing might be necessary if this were not a live environment.");
+    console.error("GEMINI_API_KEY is not set in Netlify Environment Variables.");
 }
 
 // =================================================================
@@ -119,76 +118,56 @@ F. ĐỊNH DẠNG JSON ALERT (Mô phỏng):
 `;
 
 /**
- * Xử lý yêu cầu gửi tin nhắn từ Frontend.
- * @param {object} event - Sự kiện HTTP từ Netlify
- * @returns {object} Phản hồi HTTP
+ * Netlify Function handler
  */
 exports.handler = async (event, context) => {
-    // 1. Kiểm tra phương thức và API Key
-    if (event.httpMethod !== 'POST') {
-        return { statusCode: 405, body: JSON.stringify({ error: 'Method Not Allowed' }) };
+    if (event.httpMethod !== "POST") {
+        return { statusCode: 405, body: JSON.stringify({ error: "Method Not Allowed" }) };
     }
-    
+
     if (!ai) {
-        return { statusCode: 500, body: JSON.stringify({ error: 'AI Client Initialization Failed: API Key Missing' }) };
+        return { statusCode: 500, body: JSON.stringify({ error: "API Key not found" }) };
     }
 
     try {
-        // 2. Phân tích dữ liệu từ Frontend
-        const { message, history, systemInstruction } = JSON.parse(event.body);
-        
-        // 3. Xây dựng Context cho AI (RAG - Retrieval-Augmented Generation)
-        
-        // Tạo một thông điệp context chứa toàn bộ dữ liệu cơ sở và quy tắc mới
+        const { message, history } = JSON.parse(event.body);
+
         const contextMessage = {
             role: "user",
-            parts: [{ 
+            parts: [{
                 text: `
-                ${ENHANCED_SYSTEM_INSTRUCTION}
-                
-                --- DỮ LIỆU CƠ SỞ KIẾN THỨC VỀ CHĂM SÓC SAU PHẪU THUẬT ---
-                
-                Sử dụng thông tin dưới đây để trả lời các câu hỏi cụ thể của người dùng. Nếu thông tin không có trong tài liệu, phải chuyển sang luồng HƯỚNG DẪN HÀNH ĐỘNG KHẨN CẤP (luồng 3️⃣).
-                
-                ${KNOWLEDGE_BASE_DATA}
+${ENHANCED_SYSTEM_INSTRUCTION}
+
+--- DỮ LIỆU CƠ SỞ CHĂM SÓC SAU PHẪU THUẬT ---
+${KNOWLEDGE_BASE_DATA}
                 `
             }]
         };
 
-        // Contents bao gồm: [Dữ liệu cơ sở + Quy tắc, Lịch sử chat]
         const contents = [
             contextMessage,
-            // Lịch sử chat từ Frontend (không bao gồm SYSTEM_INSTRUCTION cũ)
             ...history.slice(1)
         ];
 
+        // Gọi Gemini API
+        const model = ai.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
 
-        // 4. Gọi Gemini API
-        const response = await ai.models.generateContent({
-            // Sử dụng mô hình gemini-2.0-flash-lite theo yêu cầu
-            model: "gemini-2.0-flash-lite", 
-            contents: contents,
-            // ĐÃ XÓA TÍNH NĂNG TÌM KIẾM GOOGLE
+        const response = await model.generateContent({
+            contents
         });
-        
-        const candidate = response.candidates?.[0];
-        let aiText = "Tôi xin lỗi, tôi không thể tạo ra phản hồi lúc này.";
-        
-        if (candidate && candidate.content?.parts?.[0]?.text) {
-            aiText = candidate.content.parts[0].text;
-        }
-        
-        // 5. Trả về phản hồi
+
+        const result = response.response.text() || "Không thể tạo phản hồi lúc này.";
+
         return {
             statusCode: 200,
-            body: JSON.stringify({ reply: aiText })
+            body: JSON.stringify({ reply: result })
         };
 
     } catch (error) {
-        console.error('Gemini API Error:', error);
+        console.error("Gemini API Error:", error);
         return {
             statusCode: 500,
-            body: JSON.stringify({ error: error.message || 'Internal Server Error during AI processing.' })
+            body: JSON.stringify({ error: error.message })
         };
     }
 };
