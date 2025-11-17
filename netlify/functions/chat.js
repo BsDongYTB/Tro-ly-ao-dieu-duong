@@ -1,16 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// Load API Key từ Netlify Environment Variables
-const apiKey = process.env.GEMINI_API_KEY;
-
-// Khởi tạo client
-let ai;
-if (apiKey) {
-    ai = new GoogleGenerativeAI(apiKey);
-} else {
-    console.error("GEMINI_API_KEY is not set in Netlify Environment Variables.");
-}
-
 // =================================================================
 // DỮ LIỆU CƠ SỞ KIẾN THỨC TỪ FILE WORD
 // =================================================================
@@ -124,13 +113,21 @@ exports.handler = async (event, context) => {
         return { statusCode: 405, body: JSON.stringify({ error: "Method Not Allowed" }) };
     }
 
-    if (!ai) {
-        return { statusCode: 500, body: JSON.stringify({ error: "API Key not found" }) };
+    // Lấy API Key từ biến môi trường
+    const apiKey = process.env.GEMINI_API_KEY;
+
+    if (!apiKey) {
+        // Lỗi này xảy ra khi biến môi trường không được đặt trên Netlify
+        return { statusCode: 500, body: JSON.stringify({ error: "Configuration Error: GEMINI_API_KEY not found in environment variables." }) };
     }
+    
+    // Khởi tạo client bên trong handler để đảm bảo luôn lấy được biến môi trường
+    const ai = new GoogleGenerativeAI(apiKey);
 
     try {
-        const { message, history } = JSON.parse(event.body);
+        const { history } = JSON.parse(event.body);
 
+        // Xây dựng Context cho AI (bao gồm Dữ liệu Word và Quy tắc)
         const contextMessage = {
             role: "user",
             parts: [{
@@ -143,6 +140,7 @@ ${KNOWLEDGE_BASE_DATA}
             }]
         };
 
+        // Gửi Context và Lịch sử chat (trừ tin nhắn chào mừng ban đầu)
         const contents = [
             contextMessage,
             ...history.slice(1)
@@ -155,7 +153,7 @@ ${KNOWLEDGE_BASE_DATA}
             contents
         });
 
-        const result = response.response.text() || "Không thể tạo phản hồi lúc này.";
+        const result = response.response.text || "Không thể tạo phản hồi lúc này.";
 
         return {
             statusCode: 200,
@@ -163,10 +161,21 @@ ${KNOWLEDGE_BASE_DATA}
         };
 
     } catch (error) {
-        console.error("Gemini API Error:", error);
+        // Bắt lỗi cụ thể từ Gemini và hiển thị lại cho người dùng
+        console.error("Gemini API Error:", error.message);
+        let errorMessage = "Lỗi không xác định khi gọi AI.";
+        
+        if (error.message && error.message.includes("429 Too Many Requests")) {
+            errorMessage = "Lỗi 429: Hạn mức API tạm thời bị quá tải. Vui lòng chờ 30 phút và thử lại.";
+        } else if (error.message && error.message.includes("API Key not valid")) {
+            errorMessage = "Lỗi xác thực: Khóa API không hợp lệ.";
+        } else {
+            errorMessage = `Lỗi API: ${error.message}`;
+        }
+
         return {
             statusCode: 500,
-            body: JSON.stringify({ error: error.message })
+            body: JSON.stringify({ error: errorMessage })
         };
     }
 };
