@@ -6,135 +6,6 @@
     <title>Trợ lý ảo Điều dưỡng</title>
     <!-- Tải Tailwind CSS cho styling --><script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Tải Firebase SDK (Auth và Firestore) -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        
-        // Bật log debug cho Firebase
-        setLogLevel('debug'); 
-
-        // Các biến toàn cục được Canvas cung cấp
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
-        let db, auth, currentUserId;
-
-        // Định nghĩa các hàm toàn cục để có thể gọi từ bên ngoài module
-        window.initializeFirebase = async function() {
-            if (!firebaseConfig) {
-                console.error("Firebase config not found.");
-                return;
-            }
-            
-            // 1. Khởi tạo Firebase
-            const app = initializeApp(firebaseConfig);
-            db = getFirestore(app);
-            auth = getAuth(app);
-            window.db = db; // Đặt biến db ra ngoài phạm vi module cho các hàm khác sử dụng
-            
-            // 2. Đăng nhập hoặc xác thực
-            try {
-                if (initialAuthToken) {
-                    await signInWithCustomToken(auth, initialAuthToken);
-                } else {
-                    await signInAnonymously(auth);
-                }
-            } catch (error) {
-                console.error("Firebase Auth Error:", error);
-            }
-
-            // 3. Lắng nghe trạng thái Auth
-            onAuthStateChanged(auth, (user) => {
-                if (user) {
-                    currentUserId = user.uid;
-                    document.getElementById('user-id-display').textContent = `ID Người dùng: ${currentUserId}`;
-                    console.log("User signed in with ID:", currentUserId);
-                    window.currentUserId = currentUserId; // Cung cấp ID cho các hàm bên ngoài
-                    
-                    // 4. Bắt đầu lắng nghe lịch sử chat ngay sau khi có user ID
-                    loadChatHistory(currentUserId, appId); 
-                } else {
-                    console.log("User is signed out.");
-                }
-            });
-        };
-
-        /**
-         * Tải và lắng nghe lịch sử chat từ Firestore
-         * @param {string} userId - ID người dùng hiện tại
-         * @param {string} appId - ID ứng dụng hiện tại
-         */
-        function loadChatHistory(userId, appId) {
-            if (!db || !userId) return;
-
-            // Đường dẫn đến collection lưu trữ lịch sử chat của user này
-            // Mẫu: /artifacts/{appId}/users/{userId}/chats
-            const chatPath = `artifacts/${appId}/users/${userId}/chats`;
-            const chatCollection = collection(db, chatPath);
-            
-            // Sắp xếp theo timestamp
-            const q = query(chatCollection, orderBy("timestamp", "asc"));
-
-            // Thiết lập lắng nghe theo thời gian thực (onSnapshot)
-            onSnapshot(q, (snapshot) => {
-                const initialLoadingMessage = document.getElementById('initial-loading-message');
-                if (initialLoadingMessage) {
-                    initialLoadingMessage.remove(); // Xóa tin nhắn loading khi bắt đầu nhận dữ liệu
-                }
-
-                snapshot.docChanges().forEach((change) => {
-                    const data = change.doc.data();
-                    const role = data.role === 'user' ? 'user' : 'model';
-                    
-                    if (change.type === "added") {
-                        // Chỉ thêm tin nhắn mới vào cuối
-                        appendMessage(data.text, role, true); 
-                    }
-                    // Bỏ qua change.type === "modified" và "removed" cho chat
-                });
-                
-                // Sau khi nạp lịch sử, nếu chưa có tin nhắn nào, hiển thị tin nhắn chào mừng AI
-                if (snapshot.size === 0) {
-                    // Nếu chưa có tin nhắn nào được lưu, hiển thị tin nhắn chào mừng AI
-                    appendMessage("Chào bạn! Tôi là Trợ lý ảo Điều dưỡng, tôi ở đây để hỗ trợ các câu hỏi liên quan đến chăm sóc sau phẫu thuật và y tế. Bạn cần tôi giúp gì?", 'model', true);
-                }
-            }, (error) => {
-                console.error("Error listening to chat history:", error);
-                const initialLoadingMessage = document.getElementById('initial-loading-message');
-                if (initialLoadingMessage) {
-                    initialLoadingMessage.textContent = "Lỗi tải lịch sử chat. Vui lòng tải lại trang.";
-                }
-            });
-        }
-        
-        /**
-         * Gửi tin nhắn người dùng và lưu vào Firestore
-         * @param {string} text - Nội dung tin nhắn người dùng
-         */
-        window.saveUserMessage = async function(text) {
-            if (!db || !currentUserId) {
-                console.error("Database or User ID is not ready.");
-                return;
-            }
-            try {
-                const chatPath = `artifacts/${appId}/users/${currentUserId}/chats`;
-                await addDoc(collection(db, chatPath), {
-                    role: 'user',
-                    text: text,
-                    timestamp: serverTimestamp() 
-                });
-            } catch (error) {
-                console.error("Error saving user message to Firestore:", error);
-            }
-        };
-
-        // Cung cấp hàm appendMessage ra ngoài để dùng trong script chính
-        window.appendMessage = appendMessage;
-    </script>
-
     <!-- Cấu hình Font và Tailwind --><style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
         :root {
@@ -181,14 +52,18 @@
                 <img src="./images/Logo1.png" onerror="this.src='https://placehold.co/32x32/1e3a8a/ffffff?text=L1'" alt="Logo Khung Chat" class="header-logo mr-3">
                 <h1 class="text-xl font-bold flex-grow">Trợ lý ảo Điều dưỡng</h1>
             </div>
-            <p id="user-id-display" class="text-xs mt-1 opacity-75">Đang tải...</p>
+            <p id="user-id-display" class="text-xs mt-1 opacity-75">Sẵn sàng</p>
         </header>
 
         <!-- Chat History Area -->
         <div id="chat-history" class="chat-history flex-grow overflow-y-auto p-4 space-y-4">
-            <!-- Lịch sử chat sẽ được nạp tại đây từ Firestore -->
-            <div id="initial-loading-message" class="text-center text-gray-500 pt-8">
-                Đang kết nối với cơ sở dữ liệu...
+            <!-- Tin nhắn chào mừng ban đầu -->
+            <div class="flex justify-start items-start">
+                <img src="./images/Logo2.png" alt="Logo Chatbot" class="message-avatar mt-1" onerror="this.onerror=null; this.src='https://placehold.co/28x28/1e3a8a/ffffff?text=B'">
+                <div class="bg-indigo-100 text-indigo-900 p-3 rounded-xl rounded-bl-none max-w-xs shadow">
+                    <p class="font-semibold text-sm">Trợ lý ảo Điều dưỡng</p>
+                    <p>Xin chào, tôi là Trợ lý Ảo Điều Dưỡng của Bệnh viện 👩‍⚕️. Tôi ở đây để hỗ trợ các câu hỏi liên quan đến chăm sóc sau phẫu thuật. Bạn cần tôi giúp gì?</p>
+                </div>
             </div>
         </div>
 
@@ -232,11 +107,9 @@
         //                 THIẾT LẬP VÀ LOGIC CHÍNH
         // =================================================================
 
-        // Không cần API KEY ở đây nữa vì nó được chuyển sang Netlify Function
-        const HOTLINE_NUMBER = "0913570808"; // Đã cập nhật số hotline từ dữ liệu cơ sở
-        // LOGO 2: Đường dẫn tương đối từ thư mục gốc
+        const HOTLINE_NUMBER = "0913570808"; 
         const BOT_AVATAR = "./images/Logo2.png"; 
-        const USER_AVATAR = "./images/Logo1.png"; // Dùng tạm logo 1 làm avatar người dùng
+        const USER_AVATAR = "./images/Logo1.png"; 
 
         // DOM Elements
         const chatHistory = document.getElementById('chat-history');
@@ -245,32 +118,11 @@
         const loadingIndicator = document.getElementById('loading-indicator');
         const notificationModal = document.getElementById('notification-modal');
         const modalMessage = document.getElementById('modal-message');
-        const initialLoadingMessage = document.getElementById('initial-loading-message');
         const hotlineButton = document.getElementById('hotline-floating-button'); 
 
-        // === VỊ TRÍ ĐỂ ĐƯA YÊU CẦU VỀ CÁCH THỨC CHATBOT TRẢ LỜI ===
-        // Lưu ý: SYSTEM_INSTRUCTIONS này chỉ được gửi lên Netlify Function.
-        const SYSTEM_INSTRUCTIONS = `
-            Bạn là một Trợ lý ảo Điều dưỡng tận tâm và chuyên nghiệp. 
-            Nhiệm vụ của bạn là cung cấp thông tin, lời khuyên và hướng dẫn liên quan đến các vấn đề điều dưỡng, y tế cơ bản, chăm sóc sức khỏe.
-            Hãy trả lời một cách rõ ràng, dễ hiểu, thân thiện và chính xác.
-            Luôn nhấn mạnh rằng lời khuyên của bạn không thay thế cho việc thăm khám bác sĩ hoặc chuyên gia y tế.
-            Nếu câu hỏi nằm ngoài phạm vi điều dưỡng hoặc thông tin y tế cơ bản, hãy lịch sự từ chối hoặc đề xuất liên hệ hotline.
-            
-            Dữ liệu cơ sở kiến thức sẽ được cung cấp riêng biệt. Hãy dùng nó để trả lời các câu hỏi cụ thể của người dùng.
-        `;
-        // ==============================================================
-        
-        // State tạm thời để theo dõi tin nhắn đã được hiển thị (tránh lặp)
-        const displayedMessages = new Set();
-        
-        // Khởi tạo một mảng lịch sử trò chuyện cục bộ mới, chỉ cho Gemini
-        let geminiChatHistory = [
-             {
-                role: "user",
-                parts: [{ text: SYSTEM_INSTRUCTIONS }]
-            },
-        ];
+        // Lưu trữ lịch sử chat cục bộ (trong phiên)
+        // Lưu ý: Lịch sử này không được gửi lên Netlify Function vì KNOWLEDGE_BASE_DATA đã được gửi sẵn.
+        let geminiChatHistory = []; 
 
         // Lắng nghe sự kiện click nút Gửi
         sendButton.addEventListener('click', handleSendMessage);
@@ -284,10 +136,7 @@
 
         // Lắng nghe sự kiện click nút Hotline
         hotlineButton.addEventListener('click', function() {
-            // Sử dụng alert thay vì window.confirm
             showModal("Gọi Hotline", `Bạn có muốn gọi đến Hotline: ${HOTLINE_NUMBER}?`);
-            
-            // Tạm thời gọi trực tiếp, người dùng cần xác nhận trên điện thoại
             window.location.href = `tel:${HOTLINE_NUMBER}`;
         });
 
@@ -296,29 +145,14 @@
         // =================================================================
 
         /**
-         * Thêm tin nhắn mới vào lịch sử chat (Chỉ chạy cho tin nhắn từ Firestore)
+         * Thêm tin nhắn mới vào lịch sử chat
          * @param {string} text - Nội dung tin nhắn
          * @param {string} role - Vai trò ("user" hoặc "model")
-         * @param {boolean} fromSnapshot - Đánh dấu tin nhắn từ onSnapshot
          */
-        function appendMessage(text, role, fromSnapshot = false) {
-            // Firestore onSnapshot có thể trigger lại các tin nhắn đã có.
-            // Dùng Set để chỉ thêm tin nhắn mới.
-            const uniqueId = `${role}-${text.trim().substring(0, 50)}`;
-            if (fromSnapshot && displayedMessages.has(uniqueId)) {
-                return;
-            }
-            displayedMessages.add(uniqueId);
-            
-            // Xóa tin nhắn loading ban đầu nếu có tin nhắn mới
-            if (initialLoadingMessage && initialLoadingMessage.parentNode) {
-                initialLoadingMessage.remove();
-            }
-            
+        function appendMessage(text, role) {
             const messageWrapper = document.createElement('div');
             const messageContent = document.createElement('div');
             
-            // Cấu hình wrapper
             messageWrapper.className = `flex ${role === 'user' ? 'justify-end' : 'justify-start'} items-start`;
             
             // Thêm avatar
@@ -327,12 +161,10 @@
             avatar.alt = role === 'model' ? "Bot Avatar" : "User Avatar";
             avatar.className = "message-avatar mt-1";
 
-            // Thêm fallback cho hình ảnh
             avatar.onerror = function() {
                 this.onerror=null; 
                 this.src = `https://placehold.co/28x28/${role === 'model' ? '1e3a8a' : '377dff'}/ffffff?text=${role === 'model' ? 'B' : 'U'}`;
             };
-
 
             if (role === 'model') {
                 messageWrapper.appendChild(avatar);
@@ -350,6 +182,7 @@
             roleEl.textContent = roleName;
 
             const textEl = document.createElement('p');
+            // Xử lý Markdown đơn giản cho dễ đọc
             const htmlText = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
             textEl.innerHTML = htmlText;
 
@@ -371,7 +204,6 @@
 
         /**
          * Bật/Tắt trạng thái tải và nút Gửi
-         * @param {boolean} isLoading - Trạng thái tải
          */
         function setUILoading(isLoading) {
             userInput.disabled = isLoading;
@@ -380,47 +212,43 @@
             sendButton.textContent = isLoading ? '...' : 'Gửi';
         }
 
+        /**
+         * Hiển thị Modal thông báo
+         */
+        function showModal(title, message) {
+            document.querySelector('#notification-modal h3').textContent = title;
+            modalMessage.textContent = message;
+            notificationModal.classList.remove('hidden');
+        }
+
         // =================================================================
-        //                  HÀM XỬ LÝ CHÍNH VÀ FIREBASE
+        //                  HÀM XỬ LÝ CHÍNH (GỌI NETLIFY)
         // =================================================================
         
-        /**
-         * Xử lý gửi tin nhắn: Lưu vào Firestore, sau đó gọi Netlify Function
-         */
         async function handleSendMessage() {
             const userMessage = userInput.value.trim();
 
             if (userMessage === '') return;
-            if (!window.currentUserId) {
-                showModal("Lỗi Auth", "Hệ thống đang chờ xác thực người dùng. Vui lòng đợi trong giây lát.");
-                return;
-            }
-
-            // 1. Lưu tin nhắn người dùng vào Firestore (sẽ tự động hiển thị qua onSnapshot)
-            window.saveUserMessage(userMessage);
-
-            // 2. Chuẩn bị cho việc gọi AI (giữ lại lịch sử chat cho AI)
+            
+            // 1. Hiển thị tin nhắn người dùng
+            appendMessage(userMessage, 'user');
+            
+            // 2. Cập nhật lịch sử chat cục bộ cho AI (chỉ gửi tin nhắn)
             geminiChatHistory.push({ role: "user", parts: [{ text: userMessage }] });
 
             userInput.value = ''; 
             setUILoading(true);
 
             // 3. Gọi Netlify Function (Endpoint /api/chat)
-            await callNetlifyFunction(userMessage);
+            await callNetlifyFunction();
         }
 
-        /**
-         * Hàm gọi Netlify Function để lấy phản hồi của AI
-         */
-        async function callNetlifyFunction(userMessage) {
+        async function callNetlifyFunction() {
             const NETLIFY_FUNCTION_URL = '/.netlify/functions/chat';
 
             // Dữ liệu sẽ được gửi đến Netlify Function
             const payload = {
-                message: userMessage,
                 history: geminiChatHistory,
-                // Gửi SYSTEM_INSTRUCTIONS để AI biết vai trò và cách trả lời
-                systemInstruction: SYSTEM_INSTRUCTIONS
             };
 
             try {
@@ -435,11 +263,11 @@
                 if (response.ok && result.reply) {
                     const aiText = result.reply;
                     
-                    // 4. Lưu phản hồi của AI vào Firestore
-                    await saveModelMessage(aiText);
-                    
-                    // 5. Cập nhật lịch sử chat cục bộ cho các lần chat tiếp theo
+                    // 4. Cập nhật lịch sử chat cục bộ cho các lần chat tiếp theo
                     geminiChatHistory.push({ role: "model", parts: [{ text: aiText }] });
+                    
+                    // 5. Hiển thị tin nhắn của AI
+                    appendMessage(aiText, 'model');
 
                 } else {
                     const errorMsg = result.error || "Phản hồi AI không hợp lệ.";
@@ -458,41 +286,10 @@
             }
         }
         
-        /**
-         * Lưu tin nhắn của AI vào Firestore
-         * @param {string} text - Nội dung tin nhắn của AI
-         */
-        async function saveModelMessage(text) {
-            if (!window.db || !window.currentUserId) return;
-            try {
-                const chatPath = `artifacts/${window.appId}/users/${window.currentUserId}/chats`;
-                await addDoc(collection(window.db, chatPath), {
-                    role: 'model',
-                    text: text,
-                    timestamp: serverTimestamp() 
-                });
-            } catch (error) {
-                console.error("Error saving model message to Firestore:", error);
-            }
-        }
-        
-        /**
-         * Hiển thị Modal thông báo
-         * @param {string} title - Tiêu đề Modal
-         * @param {string} message - Nội dung Modal
-         */
-        function showModal(title, message) {
-            document.querySelector('#notification-modal h3').textContent = title;
-            modalMessage.textContent = message;
-            notificationModal.classList.remove('hidden');
-        }
-
-
         // =================================================================
         //                    KHỞI TẠO CHUNG
         // =================================================================
         window.onload = function() {
-            window.initializeFirebase(); // Bắt đầu quá trình xác thực và kết nối Firebase
             userInput.focus();
         };
 
