@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // =================================================================
-// DỮ LIỆU CƠ SỞ KIẾN THỨC TỪ FILE WORD 
+// DỮ LIỆU CƠ SỞ KIẾN THỨC TỪ FILE WORD
 // =================================================================
 const KNOWLEDGE_BASE_DATA = `
 TÀI LIỆU TƯ VẤN – TRUYỀN THÔNG: CHĂM SÓC NGƯỜI BỆNH SAU PHẪU THUẬT
@@ -16,37 +16,36 @@ I. Chuẩn bị người bệnh trước phẫu thuật:
 6. Ký cam đoan: NB/ người đại diện ký cam đoan đồng ý phẫu thuật.
 II. Chăm sóc sau phẫu thuật
 1. Hướng dẫn Chế độ dinh dưỡng:
-1.1. Nguyên tắc chung: Ăn từ lỏng → đặc → mềm → bình thường. Ưu tiên ít dầu mỡ – ít gia vị – dễ tiêu. Tránh thức ăn gây đầy hơi.
-1.2. Chế độ ăn sau mổ bệnh Ngoại tiêu hóa (ruột thừa, đại tràng, dạ dày, túi mật…): 
-    **GHI CHÚ QUAN TRỌNG: Phẫu thuật Trĩ cũng được xem là loại hình Ngoại tiêu hóa.**
-    - Hướng dẫn chung: Theo dõi trung tiện, đại tiện. Tránh thức ăn sinh hơi (Đậu nành, nước có ga, đồ chiên rán, rau sống). Chia nhỏ 5–6 bữa/ngày.
-    - Ngày 1–2 sau mổ: Nhấp vài ngụm nước lọc (sau khi tỉnh, không buồn nôn). Sau 6 tiếng: ăn cháo loãng, súp loãng. Tránh sữa và đồ ngọt khi bụng rỗng.
-    - Ngày 3–5 sau mổ: Cháo/súp đặc hơn, cơm nát, trứng hấp, cá hấp, thịt nạc băm, rau củ nấu mềm (bí đỏ, cà rốt).
-    - Sau 5 ngày trở đi: Quay dần về bình thường. Tăng đạm (cá, tôm, thịt nạc). Uống đủ nước 1.5–2 l/ngày.
-    - Thực phẩm nên tránh (2 tuần đầu): Đồ nếp, rau sống, dưa/cà muối, cay nóng, dầu mỡ, nước có ga, cà phê, rượu bia.
-1.3. Chế độ ăn sau mổ bệnh Ngoại tiết niệu (sỏi thận, bàng quang…):
-    - Hướng dẫn chung: Uống đủ nước (2–2.5 l/ngày trừ khi có hạn chế) để tăng bài tiết, hạn chế tái hình thành sỏi. Giảm muối, giảm đạm động vật nếu có tiền sử sỏi.
-    - Ngày 1–2 sau mổ: Cháo loãng, súp loãng (sau 4-6 tiếng). Uống nhiều nước chia nhiều lần.
-    - Sau 5 ngày trở đi: Bổ sung trái cây giàu vitamin C (cam, bưởi). Hạn chế: Thịt đỏ, nội tạng, thức ăn quá mặn, trà đặc, cà phê, dưa/cà/măng muối.
-    - Nếu có đặt sonde/ống dẫn lưu: Uống nước rải đều, tránh đồ nhuộm màu đậm.
-1.4. Chế độ ăn sau mổ bệnh Ngoại chấn thương (Cột sống, kết hợp xương, thay khớp…):
-    - Mục tiêu: Tăng đạm, canxi, vitamin D, kẽm giúp liền xương – liền mô. Tránh tăng cân.
-    - Thực phẩm tốt: Đạm (thịt gà, cá hồi, trứng), Canxi (sữa, phô mai), Vitamin D (ánh nắng).
-    - Lưu ý chung: Ăn chậm – nhai kỹ. Tránh ăn quá no. Không tự ý dùng men tiêu hóa, kháng sinh. Báo điều dưỡng nếu buồn nôn, chướng bụng, sốt, nôn nhiều, bí trung đại tiện.
+    - 1.1. Nguyên tắc chung: Ăn từ lỏng → đặc → mềm → bình thường. Ưu tiên ít dầu mỡ – ít gia vị – dễ tiêu. Tránh thức ăn gây đầy hơi.
+    - 1.2. Chế độ ăn sau mổ bệnh Ngoại tiêu hóa (ruột thừa, đại tràng, dạ dày, túi mật…):
+        - Hướng dẫn chung: Theo dõi trung tiện, đại tiện. Tránh thức ăn sinh hơi (Đậu nành, nước có ga, đồ chiên rán, rau sống). Chia nhỏ 5–6 bữa/ngày.
+        - Ngày 1–2 sau mổ: Nhấp vài ngụm nước lọc (sau khi tỉnh, không buồn nôn). Sau 6 tiếng: ăn cháo loãng, súp loãng. Tránh sữa và đồ ngọt khi bụng rỗng.
+        - Ngày 3–5 sau mổ: Cháo/súp đặc hơn, cơm nát, trứng hấp, cá hấp, thịt nạc băm, rau củ nấu mềm (bí đỏ, cà rốt).
+        - Sau 5 ngày trở đi: Quay dần về bình thường. Tăng đạm (cá, tôm, thịt nạc). Uống đủ nước 1.5–2 l/ngày.
+        - Thực phẩm nên tránh (2 tuần đầu): Đồ nếp, rau sống, dưa/cà muối, cay nóng, dầu mỡ, nước có ga, cà phê, rượu bia.
+    - 1.3. Chế độ ăn sau mổ bệnh Ngoại tiết niệu (sỏi thận, bàng quang…):
+        - Hướng dẫn chung: Uống đủ nước (2–2.5 l/ngày trừ khi có hạn chế) để tăng bài tiết, hạn chế tái hình thành sỏi. Giảm muối, giảm đạm động vật nếu có tiền sử sỏi.
+        - Ngày 1–2 sau mổ: Cháo loãng, súp loãng (sau 4-6 tiếng). Uống nhiều nước chia nhiều lần.
+        - Sau 5 ngày trở đi: Bổ sung trái cây giàu vitamin C (cam, bưởi). Hạn chế: Thịt đỏ, nội tạng, thức ăn quá mặn, trà đặc, cà phê, dưa/cà/măng muối.
+        - Nếu có đặt sonde/ống dẫn lưu: Uống nước rải đều, tránh đồ nhuộm màu đậm.
+    - 1.4. Chế độ ăn sau mổ bệnh Ngoại chấn thương (Cột sống, kết hợp xương, thay khớp…):
+        - Mục tiêu: Tăng đạm, canxi, vitamin D, kẽm giúp liền xương – liền mô. Tránh tăng cân.
+        - Thực phẩm tốt: Đạm (thịt gà, cá hồi, trứng), Canxi (sữa, phô mai), Vitamin D (ánh nắng).
+    - Lưu ý chung: Ăn chậm – nhai kỹ. Tránh ăn quá no. Không tự ý dùng men tiêu hóa, kháng sinh. Báo điều dưỡng nếu buồn nôn, chướng bụng, sốt, nôn nhiều, bí trung đại tiện.
 2. HƯỚNG DẪN VẬN ĐỘNG & PHỤC HỒI CHỨC NĂNG:
-    - Mục tiêu: Giảm nguy cơ huyết khối tĩnh mạch sâu (DVT), tăng nhu động ruột, giảm đau, tăng thông khí phổi, tăng tốc độ phục hồi.
-    - Ngoại tiêu hóa (Bao gồm Mổ Trĩ): Vận động sớm nhất có thể. Giai đoạn 0–24 giờ: Tập thở sâu, ho khạc có hỗ trợ, cử động chân, nghiêng trở mình. Ngày 2–3: Ngồi dậy mép giường, đi lại nhẹ trong phòng. Sau 7 ngày: Đi bộ 20–30 phút. **Tránh:** Gập người mạnh, nâng vật nặng 4–6 tuần.
-    - Ngoại tiết niệu: Uống nước rải đều, tránh đồ nhuộm màu đậm. Giữ túi dẫn lưu thấp hơn bàng quang. Vận động theo chỉ định.
-    - Ngoại chấn thương: Mức độ vận động phụ thuộc chỉ định bác sĩ. Ưu tiên: giảm đau – tập chủ động sớm – ngừa teo cơ. Sau thay khớp háng: **Tránh** gập háng quá 90°, khép chân qua đường giữa, xoay trong mạnh (trong 6 tuần). Sau mổ cột sống: **Không** cúi – xoay – vặn người trong 6 tuần. Luôn đeo đai theo hướng dẫn.
-3. Chăm sóc vết mổ: Giữ sạch, khô. Không tự bóc vết mổ. Điều dưỡng thay băng. **Quan sát:** Đỏ, sưng, rỉ dịch, mùi hôi, đau tăng là dấu hiệu cảnh báo.
+    - Mục tiêu: Giảm nguy cơ huyết khối tĩnh mạch sâu (DVT), tăng nhu động ruột, giảm đau, tăng thông khí phổi, tăng tốc độ phục hồi.
+    - Ngoại tiêu hóa: Vận động sớm nhất có thể. Giai đoạn 0–24 giờ: Tập thở sâu, ho khạc có hỗ trợ, cử động chân, nghiêng trở mình. Ngày 2–3: Ngồi dậy mép giường, đi lại nhẹ trong phòng. Sau 7 ngày: Đi bộ 20–30 phút. **Tránh:** Gập người mạnh, nâng vật nặng 4–6 tuần.
+    - Ngoại tiết niệu: Uống nước rải đều, tránh đồ nhuộm màu đậm. Giữ túi dẫn lưu thấp hơn bàng quang. Vận động theo chỉ định.
+    - Ngoại chấn thương: Mức độ vận động phụ thuộc chỉ định bác sĩ. Ưu tiên: giảm đau – tập chủ động sớm – ngừa teo cơ. Sau thay khớp háng: **Tránh** gập háng quá 90°, khép chân qua đường giữa, xoay trong mạnh (trong 6 tuần). Sau mổ cột sống: **Không** cúi – xoay – vặn người trong 6 tuần. Luôn đeo đai theo hướng dẫn.
+3. Chăm sóc vết mổ: Giữ sạch, khô. Không tự bóc vết mổ. Điều dưỡng thay băng hoặc hướng dẫn thay băng tại cơ sở y tế. **Quan sát:** Đỏ, sưng, rỉ dịch, mùi hôi, đau tăng là dấu hiệu cảnh báo.
 4. Chăm sóc ống dẫn lưu: Giữ cố định. Theo dõi lượng dịch. Không rút ống khi chưa có chỉ định.
-5. Dùng thuốc: Theo đơn.
+5. Dùng thuốc: Theo đơn: giảm đau, kháng sinh, chống đông. Ghi nhớ lịch uống, báo nếu dị ứng.
 6. Theo dõi diễn biến: Theo dõi nhiệt độ, mức độ đau, tiêu hóa, dịch vết mổ. **Báo ngay** nếu sốt ≥ 38°C kèm rét run, đau tăng, bụng căng cứng, nôn nhiều, vết mổ chảy máu/rỉ dịch mủ.
 7. Liên hệ hỗ trợ: Bấm chuông bệnh/ Gọi Điều dưỡng trực khoa/ Hotline: 0913570808.
 `;
 
 // =================================================================
-// BỘ QUY TẮC VÀ VAI TRÒ CHUYÊN SÂU (ĐÃ SỬA LỖI LOGIC HỘI THOẠI)
+// BỘ QUY TẮC VÀ VAI TRÒ CHUYÊN SÂU
 // =================================================================
 const ENHANCED_SYSTEM_INSTRUCTION = `
 Bạn là Trợ lý Ảo Điều Dưỡng Hậu Phẫu (AI Nurse Assistant) của Bệnh viện.
@@ -83,36 +82,54 @@ C. LUỒNG NGOÀI PHẠM VI:
         - Nêu rõ: "Vui lòng liên hệ ngay điều dưỡng để được hỗ trợ và theo dõi."
         - Kết thúc: "Ấn chuông gọi nhân viên y tế trong phòng bệnh / Hoặc ấn nút gọi hotline (0913570808)."
 
+
 ---
 `;
-
 
 /**
  * Netlify Function handler
  */
-export const handler = async (event, context) => {
-    // Luôn khởi tạo client bên trong handler để đảm bảo lấy được API Key chính xác từ process.env
-    const apiKey = process.env.GEMINI_API_KEY;
+async function callGeminiWithRetry(model, payload, retries = 2) {
+    try {
+        return await model.generateContent(payload);
+    } catch (err) {
+        // Nếu bị 429 thì thử lại sau 1200 ms
+        if (err.message?.includes("429") && retries > 0) {
+            console.log("⚠️ 429 Too Many Requests → retrying...");
+            await new Promise(res => setTimeout(res, 1200));
+            return callGeminiWithRetry(model, payload, retries - 1);
+        }
+        throw err;
+    }
+}
 
+/* ======================================================
+   NETLIFY FUNCTION
+   ====================================================== */
+export async function handler(event, context) {
+    // Chỉ cho phép POST
     if (event.httpMethod !== "POST") {
         return { statusCode: 405, body: JSON.stringify({ error: "Method Not Allowed" }) };
     }
 
+    // Lấy API Key
+    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-        // Lỗi này chỉ xảy ra khi biến môi trường chưa được thiết lập trên Netlify
-        return { statusCode: 500, body: JSON.stringify({ error: "API Key not found: GEMINI_API_KEY is missing." }) };
+        return {
+            statusCode: 500,
+            body: JSON.stringify({
+                error: "Configuration Error: GEMINI_API_KEY not found in environment variables."
+            })
+        };
     }
 
-    // Khởi tạo client tại đây để đảm bảo sử dụng key chính xác
+    // Khởi tạo client
     const ai = new GoogleGenerativeAI(apiKey);
-    
+
     try {
         const { history } = JSON.parse(event.body);
 
-        // Tin nhắn đầu tiên của người dùng (từ Frontend) là history[0]
-        // Tin nhắn cuối cùng của người dùng (từ Frontend) là history[history.length - 1]
-
-        // System Instruction + Knowledge Base
+        // Nhúng dữ liệu word và quy tắc
         const contextMessage = {
             role: "user",
             parts: [{
@@ -125,32 +142,44 @@ ${KNOWLEDGE_BASE_DATA}
             }]
         };
 
-        // Gửi Context Message (đã chứa System Instruction và Knowledge Base)
-        // và phần còn lại của lịch sử chat (từ tin nhắn đầu tiên của người dùng)
         const contents = [
             contextMessage,
-            ...history.slice(1) 
+            ...history.slice(1)
         ];
 
-        // Lấy model. Lưu ý: "gemini-2.0-flash-lite" hoặc "gemini-2.5-flash" là phù hợp
-        const model = ai.getGenerativeModel({ model: "gemini-2.5-flash" });
-
-        const response = await model.generateContent({
-            contents
+        // Gọi Gemini (có retry)
+        const model = ai.getGenerativeModel({
+            model: "gemini-2.0-flash"
         });
 
-        const result = response.response.text || "Không thể tạo phản hồi lúc này.";
+        const response = await callGeminiWithRetry(model, { contents });
+
+        let text = "Không thể tạo phản hồi lúc này.";
+        if (response?.response?.text) {
+            text = response.response.text();
+        }
 
         return {
             statusCode: 200,
-            body: JSON.stringify({ reply: result })
+            body: JSON.stringify({ reply: text })
         };
 
     } catch (error) {
         console.error("Gemini API Error:", error);
+
+        let errorMessage = "Lỗi API không xác định.";
+
+        if (error.message?.includes("429")) {
+            errorMessage = "Lỗi 429: Hạn mức API tạm thời bị quá tải. Vui lòng thử lại sau."; 
+        } else if (error.message?.includes("API key not valid")) {
+            errorMessage = "Khóa API không hợp lệ.";
+        } else {
+            errorMessage = error.message;
+        }
+
         return {
             statusCode: 500,
-            body: JSON.stringify({ error: error.message || "Internal Server Error during Gemini call." })
+            body: JSON.stringify({ error: errorMessage })
         };
     }
-};
+}
