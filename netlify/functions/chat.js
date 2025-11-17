@@ -147,7 +147,7 @@ ${KNOWLEDGE_BASE_DATA}
         ];
 
         // Gọi Gemini API
-        const model = ai.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
+        const model = ai.getGenerativeModel({ model: "gemini-2.0-flash" });
 
         const response = await model.generateContent({
             contents
