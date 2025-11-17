@@ -1,4 +1,4 @@
-cconst { GoogleGenerativeAI } = require("@google/generative-ai");
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Load API Key từ Netlify Environment Variables
 const apiKey = process.env.GEMINI_API_KEY;
@@ -12,8 +12,7 @@ if (apiKey) {
 }
 
 // =================================================================
-// DỮ LIỆU CƠ SỞ KIẾN THỨC TỪ FILE WORD (Ngoại. Chăm sóc người bệnh sau phẫu thuật.docx)
-// Toàn bộ nội dung đã được chuyển đổi thành văn bản thô để gửi cho AI
+// DỮ LIỆU CƠ SỞ KIẾN THỨC TỪ FILE WORD
 // =================================================================
 const KNOWLEDGE_BASE_DATA = `
 TÀI LIỆU TƯ VẤN – TRUYỀN THÔNG: CHĂM SÓC NGƯỜI BỆNH SAU PHẪU THUẬT
@@ -28,21 +27,21 @@ I. Chuẩn bị người bệnh trước phẫu thuật:
 6. Ký cam đoan: NB/ người đại diện ký cam đoan đồng ý phẫu thuật.
 II. Chăm sóc sau phẫu thuật
 1. Hướng dẫn Chế độ dinh dưỡng:
-1.1. Nguyên tắc chung: Ăn từ lỏng → đặc → mềm → bình thường. Ưu tiên ít dầu mỡ – ít gia vị – dễ tiêu. Tránh thức ăn gây đầy hơi.
-1.2. Chế độ ăn sau mổ bệnh Ngoại tiêu hóa (ruột thừa, đại tràng, dạ dày, túi mật…):
-    - Hướng dẫn chung: Theo dõi trung tiện, đại tiện. Tránh thức ăn sinh hơi (Đậu nành, nước có ga, đồ chiên rán, rau sống). Chia nhỏ 5–6 bữa/ngày.
-    - Ngày 1–2 sau mổ: Nhấp vài ngụm nước lọc (sau khi tỉnh, không buồn nôn). Sau 6 tiếng: ăn cháo loãng, súp loãng. Tránh sữa và đồ ngọt khi bụng rỗng.
-    - Ngày 3–5 sau mổ: Cháo/súp đặc hơn, cơm nát, trứng hấp, cá hấp, thịt nạc băm, rau củ nấu mềm (bí đỏ, cà rốt).
-    - Sau 5 ngày trở đi: Quay dần về bình thường. Tăng đạm (cá, tôm, thịt nạc). Uống đủ nước 1.5–2 l/ngày.
-    - Thực phẩm nên tránh (2 tuần đầu): Đồ nếp, rau sống, dưa/cà muối, cay nóng, dầu mỡ, nước có ga, cà phê, rượu bia.
-1.3. Chế độ ăn sau mổ bệnh Ngoại tiết niệu (sỏi thận, bàng quang…):
-    - Hướng dẫn chung: Uống đủ nước (2–2.5 l/ngày trừ khi có hạn chế) để tăng bài tiết, hạn chế tái hình thành sỏi. Giảm muối, giảm đạm động vật nếu có tiền sử sỏi.
-    - Ngày 1–2 sau mổ: Cháo loãng, súp loãng (sau 4-6 tiếng). Uống nhiều nước chia nhiều lần.
-    - Sau 5 ngày trở đi: Bổ sung trái cây giàu vitamin C (cam, bưởi). Hạn chế: Thịt đỏ, nội tạng, thức ăn quá mặn, trà đặc, cà phê, dưa/cà/măng muối.
-    - Nếu có đặt sonde/ống dẫn lưu: Uống nước rải đều, tránh đồ nhuộm màu đậm.
-1.4. Chế độ ăn sau mổ bệnh Ngoại chấn thương (Cột sống, kết hợp xương, thay khớp…):
-    - Mục tiêu: Tăng đạm, canxi, vitamin D, kẽm giúp liền xương – liền mô. Tránh tăng cân.
-    - Thực phẩm tốt: Đạm (thịt gà, cá hồi, trứng), Canxi (sữa, phô mai), Vitamin D (ánh nắng).
+    - 1.1. Nguyên tắc chung: Ăn từ lỏng → đặc → mềm → bình thường. Ưu tiên ít dầu mỡ – ít gia vị – dễ tiêu. Tránh thức ăn gây đầy hơi.
+    - 1.2. Chế độ ăn sau mổ bệnh Ngoại tiêu hóa (ruột thừa, đại tràng, dạ dày, túi mật…):
+        - Hướng dẫn chung: Theo dõi trung tiện, đại tiện. Tránh thức ăn sinh hơi (Đậu nành, nước có ga, đồ chiên rán, rau sống). Chia nhỏ 5–6 bữa/ngày.
+        - Ngày 1–2 sau mổ: Nhấp vài ngụm nước lọc (sau khi tỉnh, không buồn nôn). Sau 6 tiếng: ăn cháo loãng, súp loãng. Tránh sữa và đồ ngọt khi bụng rỗng.
+        - Ngày 3–5 sau mổ: Cháo/súp đặc hơn, cơm nát, trứng hấp, cá hấp, thịt nạc băm, rau củ nấu mềm (bí đỏ, cà rốt).
+        - Sau 5 ngày trở đi: Quay dần về bình thường. Tăng đạm (cá, tôm, thịt nạc). Uống đủ nước 1.5–2 l/ngày.
+        - Thực phẩm nên tránh (2 tuần đầu): Đồ nếp, rau sống, dưa/cà muối, cay nóng, dầu mỡ, nước có ga, cà phê, rượu bia.
+    - 1.3. Chế độ ăn sau mổ bệnh Ngoại tiết niệu (sỏi thận, bàng quang…):
+        - Hướng dẫn chung: Uống đủ nước (2–2.5 l/ngày trừ khi có hạn chế) để tăng bài tiết, hạn chế tái hình thành sỏi. Giảm muối, giảm đạm động vật nếu có tiền sử sỏi.
+        - Ngày 1–2 sau mổ: Cháo loãng, súp loãng (sau 4-6 tiếng). Uống nhiều nước chia nhiều lần.
+        - Sau 5 ngày trở đi: Bổ sung trái cây giàu vitamin C (cam, bưởi). Hạn chế: Thịt đỏ, nội tạng, thức ăn quá mặn, trà đặc, cà phê, dưa/cà/măng muối.
+        - Nếu có đặt sonde/ống dẫn lưu: Uống nước rải đều, tránh đồ nhuộm màu đậm.
+    - 1.4. Chế độ ăn sau mổ bệnh Ngoại chấn thương (Cột sống, kết hợp xương, thay khớp…):
+        - Mục tiêu: Tăng đạm, canxi, vitamin D, kẽm giúp liền xương – liền mô. Tránh tăng cân.
+        - Thực phẩm tốt: Đạm (thịt gà, cá hồi, trứng), Canxi (sữa, phô mai), Vitamin D (ánh nắng).
     - Lưu ý chung: Ăn chậm – nhai kỹ. Tránh ăn quá no. Không tự ý dùng men tiêu hóa, kháng sinh. Báo điều dưỡng nếu buồn nôn, chướng bụng, sốt, nôn nhiều, bí trung đại tiện.
 2. HƯỚNG DẪN VẬN ĐỘNG & PHỤC HỒI CHỨC NĂNG:
     - Mục tiêu: Giảm nguy cơ huyết khối tĩnh mạch sâu (DVT), tăng nhu động ruột, giảm đau, tăng thông khí phổi, tăng tốc độ phục hồi.
@@ -57,7 +56,7 @@ II. Chăm sóc sau phẫu thuật
 `;
 
 // =================================================================
-// BỘ QUY TẮC VÀ VAI TRÒ CHUYÊN SÂU ĐÃ ĐƯỢC BỔ SUNG VÀO SYSTEM INSTRUCTION
+// BỘ QUY TẮC VÀ VAI TRÒ CHUYÊN SÂU
 // =================================================================
 const ENHANCED_SYSTEM_INSTRUCTION = `
 Bạn là Trợ lý Ảo Điều Dưỡng Hậu Phẫu (AI Nurse Assistant) của Bệnh viện.
