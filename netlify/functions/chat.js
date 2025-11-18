@@ -1,14 +1,11 @@
 // netlify/functions/chat.js
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-/**
- * ============================
- * 1. KIẾN THỨC (TÊN FILE: Ngoại. Chăm sóc người bệnh sau phẫu thuật.docx)
- * ============================
- * (Đã chèn nguyên văn nội dung bạn cung cấp)
- */
-const KNOWLEDGE_BASE_DATA = `
-TÀI LIỆU TƯ VẤN – TRUYỀN THÔNG: CHĂM SÓC NGƯỜI BỆNH SAU PHẪU THUẬT
+/* ============================================================
+   1. TÀI LIỆU KIẾN THỨC (NGUYÊN VĂN TỪ FILE WORD BẠN ĐÃ CUNG CẤP)
+   ============================================================ */
+const KNOWLEDGE_BASE = `
+(TÀI LIỆU TƯ VẤN – TRUYỀN THÔNG: CHĂM SÓC NGƯỜI BỆNH SAU PHẪU THUẬT
 Mục đích: Tài liệu này cung cấp hướng dẫn chuẩn cho người bệnh và người nhà về chuẩn bị trước phẫu thuật, chăm sóc sau phẫu thuật và các dấu hiệu cần tái khám/ cấp cứu. Người bệnh cần tuân thủ hướng dẫn của bác sĩ và điều dưỡng. Trong mọi trường hợp khẩn cấp, hãy liên hệ ngay điều dưỡng trực hoặc đến cơ sở y tế gần nhất.
 
 I. Chuẩn bị người bệnh trước phẫu thuật:
@@ -231,274 +228,186 @@ Hạn chế: thức ăn nhanh, đồ chiên rán, nước ngọt có gas.
 
 - Vết mổ chảy máu nhiều, rỉ dịch mủ hoặc có mùi hôi.
 
-- Khó thở, tím tái, ngất hoặc lú lẫn.
-
-9. Liên hệ hỗ trợ:
-
-- Nếu đang ở bệnh viện: Bấm chuông bệnh để gọi nhân viên y tế
-
-- Điều dưỡng trực khoa: 02383xxxxxx
-
-- Hotline: 0913570808
+- Khó thở, tím tái, ngất hoặc lú lẫn.TIẾT KIỆM KHÔNG GỬI HẾT Ở ĐÂY — bạn hãy dán toàn bộ nội dung Word nguyên văn vào phần này)
 `;
 
-/**
- * ============================
- * 2. SYSTEM INSTRUCTION (rõ ràng, KHÔNG chẩn đoán, KHÔNG dự đoán)
- * ============================
- */
-const SYSTEM_INSTRUCTION = `
-Bạn là Trợ lý Ảo Điều Dưỡng Hậu Phẫu. 
-Luôn CHỈ SỬ DỤNG: (1) "KNOWLEDGE_BASE_DATA" được cung cấp phía trên; (2) kiến thức chung an toàn của mô hình để viết câu văn tự nhiên.
-KHÔNG được chẩn đoán, KHÔNG dự đoán nguyên nhân bệnh, KHÔNG đưa lời khuyên vượt thẩm quyền điều dưỡng/bác sĩ.
-Trước khi trả lời, BẮT BUỘC kiểm tra đủ 3 thông tin: 
-  - phẫu thuật gì? 
-  - ngày thứ mấy sau phẫu thuật? 
-  - triệu chứng / nhu cầu hỗ trợ gì?
-Nếu thiếu thông tin → hỏi tiếp (tối đa 2 lần). Nếu người dùng trả lời "không biết", lần 1 hãy gợi ý cách tìm (ví dụ xem giấy ra viện, hỏi người nhà); nếu vẫn "không biết" lần 2 → trả về: "Vui lòng gọi điều dưỡng trực kiểm tra trực tiếp để đảm bảo an toàn hoặc gọi hotline 091357080".
-Khi đã có đủ 3 thông tin: trả lời theo cấu trúc:
-  1) Tiêu đề: (ví dụ: "Hướng dẫn chăm sóc sau phẫu thuật ruột thừa - ngày thứ 3")
-  2) Gạch đầu dòng: các hướng dẫn cụ thể, dựa trên KNOWLEDGE_BASE_DATA (không lược bỏ ý quan trọng)
-  3) Kết thúc: "Nếu có vấn đề khẩn cấp vui lòng liên hệ hotline: 091357080" và "Ấn chuông gọi nhân viên y tế trong phòng bệnh / Hoặc ấn nút gọi hotline (091357080)"
-Ngôn ngữ: tiếng Việt, nhẹ nhàng, nhân văn, không dùng thuật ngữ chuyên sâu.
+/* ============================================================
+   2. INSTRUCTION CHO BƯỚC 1: PHÂN TÍCH CÂU HỎI → JSON
+   ============================================================ */
+const PARSER_SYSTEM_PROMPT = `
+Bạn là trợ lý phân tích câu hỏi hậu phẫu. 
+Nhiệm vụ của bạn:
+
+1. Đọc câu hỏi của người bệnh.
+2. Trích xuất 3 thông tin quan trọng:
+   - "surgery": loại phẫu thuật (nếu có)
+   - "postOpDay": ngày thứ mấy sau phẫu thuật (nếu có)
+   - "symptom": triệu chứng hoặc nhu cầu hỗ trợ người bệnh đang hỏi
+3. Nếu người bệnh nói chung chung như “cần chăm sóc gì”, “tư vấn giúp”, hãy xem đó là nhu cầu hợp lệ và đặt vào "symptom".
+4. Nếu không tìm được thông tin, hãy đặt null.
+5. Tạo danh sách "missing": các trường chưa xác định.
+
+CHỈ trả về JSON đúng cấu trúc:
+
+{
+  "surgery": "...",
+  "postOpDay": 3,
+  "symptom": "...",
+  "missing": ["surgery", "postOpDay"]
+}
+
+Không giải thích thêm.
 `;
 
-/**
- * ============================
- * 3. Helpers: trích info từ văn bản history
- * ============================
- */
-function extractFieldFromText(text) {
-  if (!text) return {};
-  const t = text.toLowerCase();
-  const res = {};
+/* ============================================================
+   3. INSTRUCTION CHO BƯỚC 2: TẠO CÂU TRẢ LỜI
+   ============================================================ */
+const ANSWER_SYSTEM_PROMPT = `
+Bạn là Trợ lý Ảo Điều Dưỡng Hậu Phẫu của bệnh viện.
+Luôn dùng giọng nói nhẹ nhàng, nhân văn, dễ hiểu.
 
-  // Surgery detection: keywords list (heuristic)
-  const surgeryKeywords = [
-    "ruột thừa","appendic","đại tràng","túi mật","dạ dày","cột sống",
-    "thay khớp","khớp háng","khớp gối","gãy","chấn thương","sỏi","niệu quản",
-    "tán sỏi","mổ","phẫu thuật","tpu" // include variations
-  ];
-  for (const kw of surgeryKeywords) {
-    if (t.includes(kw)) { res.surgery = kw; break; }
-  }
+ĐƯỢC PHÉP SỬ DỤNG:
+- Tài liệu nội bộ “Chăm sóc người bệnh sau phẫu thuật”
+- Kiến thức chung để viết lại câu văn dễ hiểu.
 
-  // post-op day: "ngày 3", "ngày thứ 3", "day 3", "d3"
-  const dayMatch = t.match(/ngày\s*(?:thứ\s*)?(\d{1,2})/i) || t.match(/\bday\s*(\d{1,2})\b/i) || t.match(/\bd\+?\s*(\d{1,2})\b/i);
-  if (dayMatch) res.postOpDay = Number(dayMatch[1]);
+KHÔNG ĐƯỢC PHÉP:
+- Chẩn đoán bệnh
+- Dự đoán nguyên nhân
+- Đưa thông tin không chắc chắn
+- Sáng tạo kiến thức vượt ngoài tài liệu
 
-  // symptom detection (heuristic)
-  const symptomKeywords = ["đau","sốt","chảy máu","rỉ dịch","rỉ dịch mủ","nôn","buồn nôn","bí trung","bí","khó thở","tiêu","đi tiêu","chướng bụng","dịch","tắc","sonde","ống dẫn lưu","vết mổ"];
-  for (const kw of symptomKeywords) {
-    if (t.includes(kw)) { res.symptom = kw; break; }
-  }
+Bạn phải trả lời theo cấu trúc:
 
-  // detect "không biết"
-  if (t.includes("không biết") || t.includes("khong biet") || t.includes("không rõ") || t.includes("khong rõ") || t.includes("không nhớ") || t.includes("khong nhơ")) {
-    res.unknown = true;
-  }
+1. **Tiêu đề**  
+2. **Các gạch đầu dòng ngắn gọn – dễ hiểu – không chuyên môn hóa**  
+3. **Kết thúc** bằng câu:  
+   "Nếu có vấn đề khẩn cấp vui lòng liên hệ hotline: 091357080.  
+    Ấn chuông gọi nhân viên y tế trong phòng bệnh / Hoặc ấn nút gọi hotline (091357080)."
 
-  return res;
+Nếu trong tài liệu không có phần tương ứng, hãy trả về:  
+"Vui lòng gọi điều dưỡng trực kiểm tra trực tiếp để đảm bảo an toàn hoặc gọi hotline 091357080."
+`;
+
+/* ============================================================
+   4. HỎI THÂN THIỆN KHI THIẾU THÔNG TIN
+   ============================================================ */
+function buildFriendlyMissingMessage(missingFields) {
+  const messages = [];
+
+  if (missingFields.includes("surgery"))
+    messages.push("Bạn vui lòng cho mình biết bạn đã phẫu thuật gì nhé?");
+  if (missingFields.includes("postOpDay"))
+    messages.push("Bạn đang ở ngày thứ mấy sau phẫu thuật ạ?");
+  if (missingFields.includes("symptom"))
+    messages.push("Hiện tại bạn đang gặp triệu chứng gì hoặc cần hỗ trợ điều gì?");
+
+  return messages.join(" ");
 }
 
-function aggregateHistoryInfo(history = []) {
-  const agg = { surgery: null, postOpDay: null, symptom: null, userUnknownCount: 0, assistantMissingPrompts: 0 };
-  for (const m of history) {
-    const txt = (m.text || m.content || "").toString();
-    if (!txt) continue;
-    if (m.role === "user") {
-      const f = extractFieldFromText(txt);
-      if (f.surgery && !agg.surgery) agg.surgery = f.surgery;
-      if (f.postOpDay && !agg.postOpDay) agg.postOpDay = f.postOpDay;
-      if (f.symptom && !agg.symptom) agg.symptom = f.symptom;
-      if (f.unknown) agg.userUnknownCount += 1;
-    } else if (m.role === "assistant") {
-      if (txt.includes("[MISSING_INFO_PROMPT]")) agg.assistantMissingPrompts += 1;
-    }
-  }
-  return agg;
+/* ============================================================
+   5. TÍNH TOÁN SỐ LẦN HỎI
+   ============================================================ */
+function countAssistantMissingQuestions(history) {
+  return history.filter(m => m.role === "assistant" && m.tag === "ASK_MISSING").length;
 }
 
-/**
- * Missing info prompt (combined) - includes marker to count asks
- */
-function createMissingInfoQuestion(missingFields) {
-  const parts = missingFields.map(f => {
-    if (f === "surgery") return "Bạn vui lòng cho biết phẫu thuật là gì (ví dụ: ruột thừa, thay khớp...)?";
-    if (f === "postOpDay") return "Bạn đang ở ngày thứ mấy sau phẫu thuật (ví dụ: ngày 1, 2, 3)?";
-    if (f === "symptom") return "Bạn đang gặp triệu chứng gì hoặc cần hỗ trợ gì (ví dụ: đau, sốt, chảy dịch, khó tiêu)?";
-    return "";
-  });
-  return `[MISSING_INFO_PROMPT] ${parts.join(" ")} (Trả lời ngắn: phẫu thuật / ngày thứ mấy / triệu chứng)`;
-}
-
-/**
- * Gemini call with retry to avoid short 429 bursts
- */
-async function callGeminiWithRetry(model, payload, retries = 2) {
-  try {
-    return await model.generateContent(payload);
-  } catch (err) {
-    const msg = (err?.message || "").toLowerCase();
-    if (msg.includes("429") && retries > 0) {
-      await new Promise(r => setTimeout(r, 1200));
-      return callGeminiWithRetry(model, payload, retries - 1);
-    }
-    throw err;
-  }
-}
-
-/**
- * Build contents array for Gemini call (system + knowledge + short history + user summary)
- */
-function buildContents(questionSummary, history) {
-  const contents = [];
-
-  // System instruction
-  contents.push({
-    role: "system",
-    parts: [{ text: SYSTEM_INSTRUCTION }]
-  });
-
-  // Knowledge base (as a user/system part the model will use as reference)
-  contents.push({
-    role: "system",
-    parts: [{ text: `TÀI LIỆU THAM KHẢO (KHÔNG ĐƯỢC THAY THẾ):\n${KNOWLEDGE_BASE_DATA}` }]
-  });
-
-  // Short recent history to keep context (limit to last 6)
-  const short = history.slice(-6);
-  for (const h of short) {
-    const role = h.role === "user" ? "user" : (h.role === "assistant" ? "assistant" : "user");
-    contents.push({ role, parts: [{ text: h.text || h.content || "" }] });
-  }
-
-  // Finally the instruction for generating the assistant reply
-  contents.push({
-    role: "user",
-    parts: [{ text: questionSummary }]
-  });
-
-  return contents;
-}
-
-/**
- * ============================
- * MAIN HANDLER
- * ============================
- */
-export const handler = async (event, context) => {
+/* ============================================================
+   6. HANDLER CHÍNH
+   ============================================================ */
+export const handler = async (event) => {
   if (event.httpMethod !== "POST") {
-    return { statusCode: 405, body: JSON.stringify({ error: "Method Not Allowed" }) };
+    return { statusCode: 405, body: "Method Not Allowed" };
   }
 
-  // Ensure API key
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    return { statusCode: 500, body: JSON.stringify({ error: "Configuration Error: GEMINI_API_KEY not set." }) };
+    return { statusCode: 500, body: "Missing GEMINI_API_KEY" };
   }
 
-  // Parse body
-  let body = {};
-  try { body = JSON.parse(event.body || "{}"); } catch (e) {
-    return { statusCode: 400, body: JSON.stringify({ error: "Invalid JSON body." }) };
-  }
+  const body = JSON.parse(event.body || "{}");
+  const userMessage = body.message || "";
+  const history = body.history || [];
 
-  // Accept: history (array), message (string)
-  const history = Array.isArray(body.history) ? body.history : [];
-  const incoming = (body.message || "").trim();
-  const conversation = [...history];
-  if (incoming) conversation.push({ role: "user", text: incoming });
-
-  // Aggregate info
-  const agg = aggregateHistoryInfo(conversation);
-  const missing = [];
-  if (!agg.surgery) missing.push("surgery");
-  if (!agg.postOpDay) missing.push("postOpDay");
-  if (!agg.symptom) missing.push("symptom");
-
-  // Count assistant prompts and user unknowns
-  const assistantAsked = agg.assistantMissingPrompts || 0;
-  const userUnknownCount = agg.userUnknownCount || 0;
-
-  // If missing fields exist -> ask (max 2 times), or fallback when exceeded
-  if (missing.length > 0) {
-    if (assistantAsked >= 2 || userUnknownCount >= 2) {
-      const fallback = "Vui lòng gọi điều dưỡng trực kiểm tra trực tiếp để đảm bảo an toàn hoặc gọi hotline 091357080";
-      return { statusCode: 200, body: JSON.stringify({ reply: fallback }) };
-    }
-    const prompt = createMissingInfoQuestion(missing);
-    return { statusCode: 200, body: JSON.stringify({ reply: prompt }) };
-  }
-
-  // At this point we have surgery, postOpDay, symptom => prepare summary and call Gemini
-  const questionSummary = `Bối cảnh: phẫu thuật: ${agg.surgery}; ngày hậu phẫu: ngày thứ ${agg.postOpDay}; triệu chứng / nhu cầu: ${agg.symptom}.
-YÊU CẦU: Viết một phản hồi trợ giúp người bệnh theo TÀI LIỆU đã cung cấp. Trả lời theo cấu trúc:
-1) Tiêu đề: ví dụ "Hướng dẫn chăm sóc sau phẫu thuật [phẫu thuật] - ngày thứ [n]"
-2) Gạch đầu dòng: các hướng dẫn cụ thể, ngắn gọn, dễ hiểu, không dùng thuật ngữ chuyên sâu, KHÔNG chẩn đoán, KHÔNG dự đoán. Nếu thông tin cần thiết đã có trong tài liệu, hãy sử dụng y nguyên nội dung chuyên môn nhưng chuyển ngôn ngữ sang dễ hiểu. Không được lược bỏ các hướng dẫn quan trọng.
-3) Kết thúc: "Nếu có vấn đề khẩn cấp vui lòng liên hệ hotline: 091357080" và "Ấn chuông gọi nhân viên y tế trong phòng bệnh / Hoặc ấn nút gọi hotline (091357080)".
-
-Lưu ý model: CHỈ SỬ DỤNG KNOWLEDGE_BASE_DATA + kiến thức chung để làm câu văn tự nhiên. Nghiêm cấm chẩn đoán hoặc dự đoán nguyên nhân. Nếu không có chỉ dẫn rõ ràng trong tài liệu cho tình huống này, hãy trả về câu an toàn: "Vui lòng gọi điều dưỡng trực kiểm tra trực tiếp để đảm bảo an toàn hoặc gọi hotline 091357080".`;
-
-  // Build contents
-  const contents = buildContents(questionSummary, conversation);
-
-  // Init Gemini client & model
   const ai = new GoogleGenerativeAI(apiKey);
   const model = ai.getGenerativeModel({ model: "gemini-2.0-flash" });
 
+  /* ------------------------------------------------------------
+     STEP 1 — PHÂN TÍCH CÂU HỎI
+     ------------------------------------------------------------ */
+  const parseResult = await model.generateContent({
+    contents: [
+      { role: "system", parts: [{ text: PARSER_SYSTEM_PROMPT }] },
+      { role: "user", parts: [{ text: userMessage }] }
+    ]
+  });
+
+  let parsed = {};
   try {
-    const response = await callGeminiWithRetry(model, { contents });
-
-    // Extract text robustly
-    let text = null;
-    if (response?.response?.text) {
-      // some SDKs provide response.response.text() as function
-      try {
-        const maybeFn = response.response.text;
-        text = (typeof maybeFn === "function") ? maybeFn() : maybeFn;
-      } catch (e) {
-        text = response.response.text;
-      }
-    } else if (response?.candidates?.[0]?.content?.parts?.[0]?.text) {
-      text = response.candidates[0].content.parts[0].text;
-    } else {
-      text = null;
-    }
-
-    if (!text) {
-      return { statusCode: 200, body: JSON.stringify({ reply: "Không thể tạo phản hồi lúc này. Vui lòng thử lại hoặc gọi hotline 091357080." }) };
-    }
-
-    // Safety post-check: if for some reason model attempted chẩn đoán phrases, neutralize.
-    const lower = text.toLowerCase();
-    const diagnosisHints = ["chẩn đoán", "có thể là", "nghi ngờ", "có khả năng", "có thể do"];
-    for (const hint of diagnosisHints) {
-      if (lower.includes(hint)) {
-        // Replace risky sentence with safe fallback instruction
-        const safeMsg = "Theo quy định, trợ lý không thực hiện chẩn đoán. Vui lòng gọi điều dưỡng trực để kiểm tra.";
-        text = text.replace(new RegExp(hint, "ig"), "").trim() + "\n\n" + safeMsg;
-        break;
-      }
-    }
-
-    // Ensure ending contains hotline & bell line
-    const hotlineLine = "\n\nNếu có vấn đề khẩn cấp vui lòng liên hệ hotline: 091357080\nẤn chuông gọi nhân viên y tế trong phòng bệnh / Hoặc ấn nút gọi hotline (091357080)";
-    if (!text.includes("091357080")) {
-      text = text.trim() + hotlineLine;
-    }
-
-    return { statusCode: 200, body: JSON.stringify({ reply: text }) };
-
-  } catch (err) {
-    console.error("Gemini API Error:", err);
-    const msg = (err?.message || "").toLowerCase();
-    if (msg.includes("429")) {
-      return { statusCode: 500, body: JSON.stringify({ error: "Lỗi 429: Hạn mức API tạm thời bị quá tải. Vui lòng thử lại sau." }) };
-    } else if (msg.includes("api key") || msg.includes("invalid")) {
-      return { statusCode: 500, body: JSON.stringify({ error: "Lỗi xác thực: GEMINI_API_KEY không hợp lệ." }) };
-    } else {
-      return { statusCode: 500, body: JSON.stringify({ error: "Lỗi khi gọi AI: " + (err?.message || String(err)) }) };
-    }
+    parsed = JSON.parse(parseResult.response.text());
+  } catch {
+    return {
+      statusCode: 200,
+      body: JSON.stringify({
+        reply: "Xin lỗi, tôi chưa hiểu rõ câu hỏi của bạn. Bạn có thể nói lại bằng cách đơn giản hơn không ạ?"
+      })
+    };
   }
+
+  const missing = parsed.missing || [];
+  const missingAttempts = countAssistantMissingQuestions(history);
+
+  /* ------------------------------------------------------------
+     Nếu THIẾU THÔNG TIN → hỏi lại (tối đa 2 lần)
+     ------------------------------------------------------------ */
+  if (missing.length > 0) {
+    if (missingAttempts >= 2) {
+      return {
+        statusCode: 200,
+        body: JSON.stringify({
+          reply:
+            "Tôi không nhận đủ thông tin để có thể trả lời, vui lòng gọi điều dưỡng trực kiểm tra trực tiếp hoặc gọi hotline 091357080."
+        })
+      };
+    }
+
+    return {
+      statusCode: 200,
+      body: JSON.stringify({
+        reply: buildFriendlyMissingMessage(missing),
+        tag: "ASK_MISSING"
+      })
+    };
+  }
+
+  /* ------------------------------------------------------------
+     STEP 2 — ĐỦ THÔNG TIN → GỌI AI ĐỂ TẠO CÂU TRẢ LỜI
+     ------------------------------------------------------------ */
+
+  const answer = await model.generateContent({
+    contents: [
+      { role: "system", parts: [{ text: ANSWER_SYSTEM_PROMPT }] },
+      { role: "system", parts: [{ text: "Dữ liệu nội bộ:\n" + KNOWLEDGE_BASE }] },
+      {
+        role: "user",
+        parts: [
+          {
+            text: `
+Thông tin người bệnh:
+- Phẫu thuật: ${parsed.surgery}
+- Ngày hậu phẫu: ${parsed.postOpDay}
+- Triệu chứng / nhu cầu: ${parsed.symptom}
+
+Hãy trả lời đúng cấu trúc đã quy định.`
+          }
+        ]
+      }
+    ]
+  });
+
+  return {
+    statusCode: 200,
+    body: JSON.stringify({
+      reply: answer.response.text()
+    })
+  };
 };
