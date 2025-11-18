@@ -1,5 +1,32 @@
 // netlify/functions/chat.js
 import { GoogleGenerativeAI } from "@google/generative-ai";
+// Hàm đọc bất kỳ dạng text nào mà Gemini trả về
+function extractGeminiText(resp) {
+  if (!resp) return "";
+
+  // SDK mới: response.text() là function
+  try {
+    const fn = resp.response?.text;
+    if (typeof fn === "function") {
+      return fn();
+    }
+  } catch {}
+
+  // SDK cũ: response.text là string
+  try {
+    if (typeof resp.response?.text === "string") {
+      return resp.response.text;
+    }
+  } catch {}
+
+  // SDK cũ hơn: candidates[]
+  try {
+    return resp.candidates?.[0]?.content?.parts?.[0]?.text || "";
+  } catch {}
+
+  return "";
+}
+
 
 /* ============================================================
    1. TÀI LIỆU KIẾN THỨC (NGUYÊN VĂN TỪ FILE WORD BẠN ĐÃ CUNG CẤP)
@@ -343,7 +370,19 @@ export const handler = async (event) => {
 
   let parsed = {};
   try {
-    parsed = JSON.parse(parseResult.response.text());
+    const rawParse = extractGeminiText(parseResult);
+let parsed = {};
+try {
+  parsed = JSON.parse(rawParse);
+} catch {
+  return {
+    statusCode: 200,
+    body: JSON.stringify({
+      reply: "Xin lỗi, tôi chưa hiểu rõ câu hỏi của bạn. Bạn có thể nói lại đơn giản hơn được không ạ?"
+    })
+  };
+}
+
   } catch {
     return {
       statusCode: 200,
@@ -407,7 +446,7 @@ Hãy trả lời đúng cấu trúc đã quy định.`
   return {
     statusCode: 200,
     body: JSON.stringify({
-      reply: answer.response.text()
+      reply: extractGeminiText(answer)
     })
   };
 };
